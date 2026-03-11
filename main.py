@@ -309,8 +309,13 @@ if __name__ == '__main__':
     else:
         rank = -1
         world_size = -1
-    torch.cuda.set_device(config.LOCAL_RANK)
-    torch.distributed.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=rank)
+    if torch.cuda.is_available():
+        torch.cuda.set_device(config.LOCAL_RANK)
+        backend = 'nccl'
+    else:
+        backend = 'gloo'
+        
+    torch.distributed.init_process_group(backend=backend, init_method='env://', world_size=world_size, rank=rank)
     torch.distributed.barrier()
 
     seed = config.SEED + dist.get_rank()
