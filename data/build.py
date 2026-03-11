@@ -121,7 +121,7 @@ def build_dataset(is_train, config):
         dataset = datasets.CIFAR10(root=config.DATA.DATA_PATH,
                                    train=is_train,
                                    transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]),
-                                   download=False)
+                                   download=True)
         nb_classes = 10
     elif config.DATA.DATASET == 'cifar100':
         dataset = datasets.CIFAR100(root=config.DATA.DATA_PATH,
