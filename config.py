@@ -116,6 +116,7 @@ _C.MODEL.CaiT_XXS.DIM_HEAD = 192 // 4
 # -----------------------------------------------------------------------------
 _C.TRAIN = CN()
 _C.TRAIN.START_EPOCH = 0
+_C.TRAIN.STOP_EPOCH = 10000
 _C.TRAIN.EPOCHS = 300
 _C.TRAIN.WARMUP_EPOCHS = 20
 _C.TRAIN.WEIGHT_DECAY = 0.05
