@@ -115,6 +115,8 @@ def build_dataset(is_train, config):
     elif config.DATA.DATASET == 'tiny-imagenet':
         prefix = 'train' if is_train else 'val'
         root = os.path.join(config.DATA.DATA_PATH, prefix)
+        if not is_train:
+            root = '/kaggle/working/val_formatted'
         dataset = datasets.ImageFolder(root, transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]))
         nb_classes = 200
     elif config.DATA.DATASET == 'cifar10':
