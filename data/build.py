@@ -134,10 +134,15 @@ def build_dataset(is_train, config):
                                     download=True)
         nb_classes = 100
     elif config.DATA.DATASET == 'stl10':
+        # Trên Kaggle, /kaggle/input là read-only. Chúng ta tắt download nếu dữ liệu đã tồn tại hoặc đang ở trong /kaggle/input
+        download = True
+        if 'kaggle/input' in config.DATA.DATA_PATH:
+            download = False
+            
         dataset = datasets.STL10(root=config.DATA.DATA_PATH,
                                  split='train' if is_train else 'test',
                                  transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]),
-                                 download=True)
+                                 download=download)
         nb_classes = 10
     elif config.DATA.DATASET == 'imagenet22K':
         prefix = 'ILSVRC2011fall_whole'
