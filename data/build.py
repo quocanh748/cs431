@@ -106,6 +106,14 @@ def build_loader(config):
 
 
 def build_dataset(is_train, config):
+    if dist.is_initialized():
+        rank = dist.get_rank()
+    else:
+        rank = 0
+
+    if rank == 0:
+        os.makedirs(config.DATA.DATA_PATH, exist_ok=True)
+
     transform = build_transform(is_train, config)
     if config.DATA.DATASET == 'imagenet':
         prefix = 'train' if is_train else 'val'
@@ -121,8 +129,12 @@ def build_dataset(is_train, config):
     elif config.DATA.DATASET == 'tiny-imagenet':
         prefix = 'train' if is_train else 'val'
         root = os.path.join(config.DATA.DATA_PATH, prefix)
-        if not is_train:
-            root = '/kaggle/working/val_formatted'
+        # Check if the formatted validation exists, if not use the default root
+        # This keeps compatibility with the Kaggle setup while allowing local use
+        kag_val = '/kaggle/working/val_formatted'
+        if not is_train and os.path.exists(kag_val):
+            root = kag_val
+        
         dataset = datasets.ImageFolder(root, transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]))
         nb_classes = 200
     elif config.DATA.DATASET == 'cifar10':
@@ -217,6 +229,10 @@ def build_dataset(is_train, config):
         nb_classes = 101
     else:
         raise NotImplementedError("We only support ImageNet Now.")
+
+    # Barrier to ensure all processes wait for rank 0 to finish downloading/preparing
+    if dist.is_initialized():
+        dist.barrier()
 
     return dataset, nb_classes
 
