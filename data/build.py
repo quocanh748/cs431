@@ -134,15 +134,35 @@ def build_dataset(is_train, config):
                                     download=True)
         nb_classes = 100
     elif config.DATA.DATASET == 'stl10':
-        # Trên Kaggle, /kaggle/input là read-only. Chúng ta tắt download nếu dữ liệu đã tồn tại hoặc đang ở trong /kaggle/input
-        download = True
-        if 'kaggle/input' in config.DATA.DATA_PATH:
-            download = False
+        # Kiểm tra xem có phải định dạng thư mục ảnh (thường thấy trên Kaggle) không
+        train_path = os.path.join(config.DATA.DATA_PATH, 'train_images')
+        test_path = os.path.join(config.DATA.DATA_PATH, 'test_images')
+        
+        if os.path.exists(train_path) and os.path.exists(test_path):
+            # Nếu tồn tại thư mục ảnh, dùng ImageFolder
+            root = train_path if is_train else test_path
+            dataset = datasets.ImageFolder(root, transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]))
+        else:
+            # Nếu không, quay lại dùng định dạng file nhị phân mặc định
+            import torchvision.datasets as datasets_torch
+            original_base_folder = datasets_torch.STL10.base_folder
+            download = True
+            if 'kaggle/input' in config.DATA.DATA_PATH:
+                download = False
+                
+            path_with_binary = os.path.join(config.DATA.DATA_PATH, original_base_folder)
+            if not download and not os.path.exists(path_with_binary):
+                if os.path.exists(os.path.join(config.DATA.DATA_PATH, 'train_X.bin')):
+                    datasets_torch.STL10.base_folder = ""
             
-        dataset = datasets.STL10(root=config.DATA.DATA_PATH,
-                                 split='train' if is_train else 'test',
-                                 transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]),
-                                 download=download)
+            try:
+                dataset = datasets_torch.STL10(root=config.DATA.DATA_PATH,
+                                             split='train' if is_train else 'test',
+                                             transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]),
+                                             download=download)
+            finally:
+                datasets_torch.STL10.base_folder = original_base_folder
+                
         nb_classes = 10
     elif config.DATA.DATASET == 'imagenet22K':
         prefix = 'ILSVRC2011fall_whole'
