@@ -134,14 +134,17 @@ def build_dataset(is_train, config):
                                     download=True)
         nb_classes = 100
     elif config.DATA.DATASET == 'stl10':
-        # Tìm kiếm file nhị phân gốc trong toàn bộ thư mục data_path
+        # Trên Kaggle, nếu dùng /kaggle/input thì không được download.
+        # Nhưng nếu dùng /kaggle/working thì có thể download thoải mái.
+        download = True
+        if 'kaggle/input' in config.DATA.DATA_PATH:
+            download = False
+            
+        # Tìm kiếm file nhị phân gốc
         stl10_root = config.DATA.DATA_PATH
         found_bin = False
-        
-        # Thử tìm file train_X.bin trong các thư mục con
         for root_dir, dirs, files in os.walk(config.DATA.DATA_PATH):
             if 'train_X.bin' in files:
-                # Nếu thấy train_X.bin, thì thư mục cha của nó (hoặc cha của stl10_binary) là stl10_root
                 if 'stl10_binary' in root_dir:
                     stl10_root = os.path.dirname(root_dir)
                 else:
@@ -149,30 +152,31 @@ def build_dataset(is_train, config):
                 found_bin = True
                 break
         
-        if found_bin:
+        if found_bin or download:
             import torchvision.datasets as datasets_torch
             original_base_folder = datasets_torch.STL10.base_folder
-            
-            # Nếu file nằm trực tiếp trong root_dir mà không có stl10_binary
-            if not os.path.exists(os.path.join(stl10_root, original_base_folder)):
+            if found_bin and not os.path.exists(os.path.join(stl10_root, original_base_folder)):
                 datasets_torch.STL10.base_folder = ""
             
             try:
+                # Nếu ở /kaggle/input mà không thấy bin (found_bin=False) và download=False, 
+                # thì lệnh này sẽ tự văng lỗi của torchvision rất rõ ràng.
                 dataset = datasets_torch.STL10(root=stl10_root,
                                              split='train' if is_train else 'test',
                                              transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]),
-                                             download=False)
+                                             download=download)
             finally:
                 datasets_torch.STL10.base_folder = original_base_folder
         else:
-            # Nếu không tìm thấy file .bin, thử dùng ImageFolder như phương án dự phòng cuối cùng
+            # Phương án dự phòng ImageFolder (chỉ dùng nếu thư mục chia theo class)
             train_path = os.path.join(config.DATA.DATA_PATH, 'train_images')
             test_path = os.path.join(config.DATA.DATA_PATH, 'test_images')
             if os.path.exists(train_path):
                 root = train_path if is_train else test_path
                 dataset = datasets.ImageFolder(root, transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]))
             else:
-                raise RuntimeError(f"Could not find STL-10 binary files or image folders in {config.DATA.DATA_PATH}")
+                raise RuntimeError(f"Không tìm thấy file .bin hoặc thư mục ảnh hợp lệ tại {config.DATA.DATA_PATH}. "
+                                 f"Gợi ý: Hãy đổi --data-path thành /kaggle/working để tự động tải về bộ dữ liệu chuẩn.")
                 
         nb_classes = 10
     elif config.DATA.DATASET == 'imagenet22K':
