@@ -47,6 +47,8 @@ STL10_DEFAULT_MEAN = (0.4467, 0.4398, 0.4066)
 STL10_DEFAULT_STD = (0.2603, 0.2566, 0.2713)
 FLOWERS102_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 FLOWERS102_DEFAULT_STD = (0.229, 0.224, 0.225)
+CALTECH101_DEFAULT_MEAN = (0.485, 0.456, 0.406)
+CALTECH101_DEFAULT_STD = (0.229, 0.224, 0.225)
 
 
 def build_loader(config):
@@ -195,6 +197,24 @@ def build_dataset(is_train, config):
                                      transform=transforms.Compose([transforms.Resize((config.DATA.IMG_SIZE, config.DATA.IMG_SIZE)), transform]),
                                      download=True)
         nb_classes = 102
+    elif config.DATA.DATASET == 'caltech101':
+        dataset = datasets.Caltech101(root=config.DATA.DATA_PATH,
+                                      transform=transforms.Compose([
+                                          transforms.Lambda(lambda x: x.convert('RGB')),
+                                          transforms.Resize((config.DATA.IMG_SIZE, config.DATA.IMG_SIZE)),
+                                          transform
+                                      ]),
+                                      download=True)
+        n_total = len(dataset)
+        n_train = int(0.8 * n_total)
+        n_val = n_total - n_train
+        train_idx, val_idx = torch.utils.data.random_split(
+            range(n_total), [n_train, n_val], generator=torch.Generator().manual_seed(config.SEED))
+        if is_train:
+            dataset = torch.utils.data.Subset(dataset, train_idx)
+        else:
+            dataset = torch.utils.data.Subset(dataset, val_idx)
+        nb_classes = 101
     else:
         raise NotImplementedError("We only support ImageNet Now.")
 
@@ -257,6 +277,19 @@ def build_transform(is_train, config):
                 mean=FLOWERS102_DEFAULT_MEAN,
                 std=FLOWERS102_DEFAULT_STD,
             )
+        elif config.DATA.DATASET == 'caltech101':
+            transform = create_transform(
+                input_size=config.DATA.IMG_SIZE,
+                is_training=True,
+                color_jitter=config.AUG.COLOR_JITTER if config.AUG.COLOR_JITTER > 0 else None,
+                auto_augment=config.AUG.AUTO_AUGMENT if config.AUG.AUTO_AUGMENT != 'none' else None,
+                re_prob=config.AUG.REPROB,
+                re_mode=config.AUG.REMODE,
+                re_count=config.AUG.RECOUNT,
+                interpolation=config.DATA.INTERPOLATION,
+                mean=CALTECH101_DEFAULT_MEAN,
+                std=CALTECH101_DEFAULT_STD,
+            )
         elif config.DATA.DATASET == 'tiny-imagenet':
             transform = create_transform(
                 input_size=config.DATA.IMG_SIZE,
@@ -313,6 +346,8 @@ def build_transform(is_train, config):
         t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
     elif config.DATA.DATASET == 'flowers102':
         t.append(transforms.Normalize(FLOWERS102_DEFAULT_MEAN, FLOWERS102_DEFAULT_STD))
+    elif config.DATA.DATASET == 'caltech101':
+        t.append(transforms.Normalize(CALTECH101_DEFAULT_MEAN, CALTECH101_DEFAULT_STD))
     else:
         t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
     return transforms.Compose(t)
