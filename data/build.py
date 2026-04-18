@@ -45,6 +45,8 @@ CIFAR100_DEFAULT_MEAN = (0.5070, 0.4865, 0.4409)
 CIFAR100_DEFAULT_STD = (0.2673, 0.2564, 0.2762)
 STL10_DEFAULT_MEAN = (0.4467, 0.4398, 0.4066)
 STL10_DEFAULT_STD = (0.2603, 0.2566, 0.2713)
+FLOWERS102_DEFAULT_MEAN = (0.485, 0.456, 0.406)
+FLOWERS102_DEFAULT_STD = (0.229, 0.224, 0.225)
 
 
 def build_loader(config):
@@ -187,6 +189,12 @@ def build_dataset(is_train, config):
             ann_file = prefix + "_map_val.txt"
         dataset = IN22KDATASET(config.DATA.DATA_PATH, ann_file, transform)
         nb_classes = 21841
+    elif config.DATA.DATASET == 'flowers102':
+        dataset = datasets.Flowers102(root=config.DATA.DATA_PATH,
+                                     split='train' if is_train else 'test',
+                                     transform=transforms.Compose([transforms.Resize((config.DATA.IMG_SIZE, config.DATA.IMG_SIZE)), transform]),
+                                     download=True)
+        nb_classes = 102
     else:
         raise NotImplementedError("We only support ImageNet Now.")
 
@@ -235,6 +243,19 @@ def build_transform(is_train, config):
                 interpolation=config.DATA.INTERPOLATION,
                 mean=STL10_DEFAULT_MEAN,
                 std=STL10_DEFAULT_STD,
+            )
+        elif config.DATA.DATASET == 'flowers102':
+            transform = create_transform(
+                input_size=config.DATA.IMG_SIZE,
+                is_training=True,
+                color_jitter=config.AUG.COLOR_JITTER if config.AUG.COLOR_JITTER > 0 else None,
+                auto_augment=config.AUG.AUTO_AUGMENT if config.AUG.AUTO_AUGMENT != 'none' else None,
+                re_prob=config.AUG.REPROB,
+                re_mode=config.AUG.REMODE,
+                re_count=config.AUG.RECOUNT,
+                interpolation=config.DATA.INTERPOLATION,
+                mean=FLOWERS102_DEFAULT_MEAN,
+                std=FLOWERS102_DEFAULT_STD,
             )
         elif config.DATA.DATASET == 'tiny-imagenet':
             transform = create_transform(
@@ -290,6 +311,8 @@ def build_transform(is_train, config):
         t.append(transforms.Normalize(STL10_DEFAULT_MEAN, STL10_DEFAULT_STD))
     elif config.DATA.DATASET == 'tiny-imagenet':
         t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
+    elif config.DATA.DATASET == 'flowers102':
+        t.append(transforms.Normalize(FLOWERS102_DEFAULT_MEAN, FLOWERS102_DEFAULT_STD))
     else:
         t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
     return transforms.Compose(t)
