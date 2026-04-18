@@ -43,6 +43,8 @@ CIFAR10_DEFAULT_MEAN = (0.4914, 0.4822, 0.4465)
 CIFAR10_DEFAULT_STD = (0.2470, 0.2435, 0.2616)
 CIFAR100_DEFAULT_MEAN = (0.5070, 0.4865, 0.4409)
 CIFAR100_DEFAULT_STD = (0.2673, 0.2564, 0.2762)
+STL10_DEFAULT_MEAN = (0.4467, 0.4398, 0.4066)
+STL10_DEFAULT_STD = (0.2603, 0.2566, 0.2713)
 
 
 def build_loader(config):
@@ -131,6 +133,12 @@ def build_dataset(is_train, config):
                                     transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]),
                                     download=True)
         nb_classes = 100
+    elif config.DATA.DATASET == 'stl10':
+        dataset = datasets.STL10(root=config.DATA.DATA_PATH,
+                                 split='train' if is_train else 'test',
+                                 transform=transforms.Compose([transforms.Resize(config.DATA.IMG_SIZE), transform]),
+                                 download=True)
+        nb_classes = 10
     elif config.DATA.DATASET == 'imagenet22K':
         prefix = 'ILSVRC2011fall_whole'
         if is_train:
@@ -174,6 +182,19 @@ def build_transform(is_train, config):
                 interpolation=config.DATA.INTERPOLATION,
                 mean=CIFAR100_DEFAULT_MEAN,
                 std=CIFAR100_DEFAULT_STD,
+            )
+        elif config.DATA.DATASET == 'stl10':
+            transform = create_transform(
+                input_size=config.DATA.IMG_SIZE,
+                is_training=True,
+                color_jitter=config.AUG.COLOR_JITTER if config.AUG.COLOR_JITTER > 0 else None,
+                auto_augment=config.AUG.AUTO_AUGMENT if config.AUG.AUTO_AUGMENT != 'none' else None,
+                re_prob=config.AUG.REPROB,
+                re_mode=config.AUG.REMODE,
+                re_count=config.AUG.RECOUNT,
+                interpolation=config.DATA.INTERPOLATION,
+                mean=STL10_DEFAULT_MEAN,
+                std=STL10_DEFAULT_STD,
             )
         elif config.DATA.DATASET == 'tiny-imagenet':
             transform = create_transform(
@@ -225,6 +246,8 @@ def build_transform(is_train, config):
         t.append(transforms.Normalize(CIFAR10_DEFAULT_MEAN, CIFAR10_DEFAULT_STD))
     elif config.DATA.DATASET == 'cifar100':
         t.append(transforms.Normalize(CIFAR100_DEFAULT_MEAN, CIFAR100_DEFAULT_STD))
+    elif config.DATA.DATASET == 'stl10':
+        t.append(transforms.Normalize(STL10_DEFAULT_MEAN, STL10_DEFAULT_STD))
     elif config.DATA.DATASET == 'tiny-imagenet':
         t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
     else:
